@@ -1,0 +1,59 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+project_name: kds
+
+
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: kds
+    main: ./main.go
+    binary: kds
+    # UPDATED SECTION: Inject all build-time variables.
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=0
+
+# ... (archives, checksum, changelog, and release sections remain unchanged) ...
+archives:
+  - id: kds
+    builds:
+      - kds
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+    format_overrides:
+      - goos: windows
+        format: zip
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "Merge branch"
+
+release:
+  github:
+    owner: diskmanti
+    name: kds
+  draft: false
+  prerelease: auto
