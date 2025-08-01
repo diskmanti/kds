@@ -1,7 +1,5 @@
-# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# .goreleaser.yml
 project_name: kds
-
-
 
 before:
   hooks:
@@ -11,7 +9,6 @@ builds:
   - id: kds
     main: ./main.go
     binary: kds
-    # UPDATED SECTION: Inject all build-time variables.
     ldflags:
       - -s -w
       - -X main.version={{.Version}}
@@ -27,7 +24,6 @@ builds:
     env:
       - CGO_ENABLED=0
 
-# ... (archives, checksum, changelog, and release sections remain unchanged) ...
 archives:
   - id: kds
     builds:
@@ -53,7 +49,7 @@ changelog:
 
 release:
   github:
-    owner: diskmanti
-    name: kds
+    owner: your-github-diskmanti # <-- IMPORTANT: Change this to your GitHub username!
+    name: kds # The name of your repository
   draft: false
   prerelease: auto

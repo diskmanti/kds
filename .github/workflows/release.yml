@@ -1,0 +1,50 @@
+# This is the name of the GitHub Actions workflow.
+name: Release kds
+
+# This workflow is triggered automatically whenever you push a new tag
+# that starts with 'v' (e.g., v0.1.0, v1.2.3).
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+# Defines the permissions the job needs. 'contents: write' is required
+# to allow GoReleaser to create a release and upload the binary assets.
+permissions:
+  contents: write
+
+jobs:
+  # The 'goreleaser' job runs the entire release process.
+  goreleaser:
+    # Use the latest version of Ubuntu as the runner environment.
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Check out the repository's code.
+      # 'fetch-depth: 0' is crucial because it fetches the full git history,
+      # which GoReleaser needs to generate a changelog.
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Step 2: Set up the Go environment on the runner.
+      # Specify the version of Go your project uses.
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21" # Or your project's Go version
+
+      # Step 3: Run the GoReleaser action.
+      # This is the core step. It downloads and runs GoReleaser.
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          # Use the latest version of GoReleaser.
+          version: latest
+          # The '--clean' flag ensures any old artifacts are removed before building.
+          args: release --clean
+        env:
+          # The GITHUB_TOKEN is a special secret automatically provided by GitHub Actions.
+          # GoReleaser uses this token to authenticate with the GitHub API
+          # to create the release on your behalf.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
