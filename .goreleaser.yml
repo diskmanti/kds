@@ -1,4 +1,3 @@
-# .goreleaser.yml
 project_name: kds
 
 before:
@@ -49,7 +48,7 @@ changelog:
 
 release:
   github:
-    owner: your-github-diskmanti # <-- IMPORTANT: Change this to your GitHub username!
-    name: kds # The name of your repository
+    owner: diskmanti
+    name: kds 
   draft: false
   prerelease: auto
