@@ -1,3 +1,7 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=jcroql
+version: 2
+
 project_name: kds
 
 before:
@@ -15,11 +19,8 @@ builds:
       - -X main.date={{.Date}}
     goos:
       - linux
-      - windows
-      - darwin
     goarch:
       - amd64
-      - arm64
     env:
       - CGO_ENABLED=0
 
@@ -29,7 +30,6 @@ archives:
       - kds
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
-      - LICENSE
       - README.md
     format_overrides:
       - goos: windows
