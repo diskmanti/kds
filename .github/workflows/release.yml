@@ -37,10 +37,11 @@ jobs:
       # Step 3: Run the GoReleaser action.
       # This is the core step. It downloads and runs GoReleaser.
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
+          distribution: goreleaser
           # Use the latest version of GoReleaser.
-          version: latest
+          version: "~> v2"
           # The '--clean' flag ensures any old artifacts are removed before building.
           args: release --clean
         env:
