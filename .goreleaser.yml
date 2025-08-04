@@ -31,10 +31,11 @@ builds:
 # Archives packages the built binary into a .tar.gz file.
 archives:
   - # This archive configuration is for the kds binary.
-    id: kds
-    # Match only the 'kds' build ID.
-    builds:
+    ids: 
       - kds
+    # # Match only the 'kds' build ID.
+    # builds:
+    #   - kds
     # Name template for the archive file.
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     # Add important files to the archive alongside the binary.
