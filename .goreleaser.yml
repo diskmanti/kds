@@ -9,35 +9,44 @@ before:
     - go mod tidy
 
 builds:
-  - id: kds
+  - # This build configuration is for the kds binary.
+    id: kds
+    # The main entry point for your application.
     main: ./main.go
+    # The name of the binary.
     binary: kds
+    # GoReleaser will inject the version information into the 'main.version' variable.
     ldflags:
-      - -s -w
-      - -X main.version={{.Version}}
-      - -X main.commit={{.Commit}}
-      - -X main.date={{.Date}}
+      - -s -w -X main.version={{.Version}}
+    # A list of platforms to build for.
+    # We are specifying ONLY linux and amd64.
     goos:
       - linux
     goarch:
       - amd64
+    # A map of custom environment variables for the build.
     env:
       - CGO_ENABLED=0
 
+# Archives packages the built binary into a .tar.gz file.
 archives:
-  - id: kds
+  - # This archive configuration is for the kds binary.
+    id: kds
+    # Match only the 'kds' build ID.
     builds:
       - kds
+    # Name template for the archive file.
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    # Add important files to the archive alongside the binary.
     files:
+      - LICENSE
       - README.md
-    format_overrides:
-      - goos: windows
-        format: zip
 
+# checksums creates a file with the SHA256 checksums of the artifact.
 checksum:
   name_template: "checksums.txt"
 
+# changelog generates a changelog for the release based on your commit history.
 changelog:
   sort: asc
   filters:
@@ -46,9 +55,10 @@ changelog:
       - "^test:"
       - "Merge branch"
 
+# release creates a new release on GitHub.
 release:
   github:
     owner: diskmanti
-    name: kds 
+    name: kds
   draft: false
   prerelease: auto
