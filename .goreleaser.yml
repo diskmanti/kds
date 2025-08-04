@@ -39,7 +39,7 @@ archives:
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     # Add important files to the archive alongside the binary.
     files:
-      - LICENSE
+      # - LICENSE
       - README.md
 
 # checksums creates a file with the SHA256 checksums of the artifact.
