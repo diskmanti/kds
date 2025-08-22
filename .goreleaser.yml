@@ -1,5 +1,6 @@
 # yaml-language-server: schema=https://goreleaser.com/static/schema.json
 project_name: kds
+version: 1
 before:
   hooks:
     - go mod tidy
@@ -14,7 +15,7 @@ builds:
       # - darwin
     goarch:
       - amd64
-      # - arm64
+      - arm64
     ldflags:
       - -s -w
       - -X main.version={{.Version}}
