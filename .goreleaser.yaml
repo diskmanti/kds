@@ -1,4 +1,6 @@
+# yaml-language-server: schema=https://goreleaser.com/static/schema.json
 project_name: kds
+version: 2
 before:
   hooks:
     - go mod tidy
@@ -22,16 +24,13 @@ builds:
 archives:
   - id: kds
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    format_overrides:
-      - goos: windows
-        format: zip
     files:
       # - LICENSE
       - README.md
 checksum:
   name_template: "checksums.txt"
 snapshot:
-  name_template: "{{ incpatch .Version }}-next"
+  version_template: "{{ incpatch .Version }}-next"
 changelog:
   sort: asc
   filters:
