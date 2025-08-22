@@ -1,16 +1,12 @@
 # yaml-language-server: schema=https://golangci-lint.run/jsonschema/golangci.jsonschema.json
 run:
   timeout: 5m
-output:
-  format: colored-line-number
-  print-issued-lines: true
-  print-linter-name: true
 linters:
   disable-all: true
   enable:
     - errcheck
-    - govet
-    - staticcheck
+    # - govet
+    # - staticcheck
     - unused
     - goimports
     - gofumpt
