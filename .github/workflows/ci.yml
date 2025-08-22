@@ -1,13 +1,12 @@
-# This is the Continuous Integration (CI) workflow for the kds project.
-# It runs automatically on every push and pull request to the main branch.
+# Simplified Continuous Integration (CI) workflow.
+# It runs on every push and pull request to the main/master branch.
 name: CI
 
-# Controls when the workflow will run.
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "main", "master" ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "main", "master" ]
 
 jobs:
   build-and-test:
