@@ -43,13 +43,13 @@ var (
 	errorColor       = lipgloss.Color("#FF4136")
 	noteStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("#888888"))
 	titleStyle       = lipgloss.NewStyle().Foreground(primaryColor).Bold(true).MarginBottom(1)
-	errorTitleStyle  = titleStyle.Copy().Foreground(errorColor)
+	errorTitleStyle  = titleStyle.Foreground(errorColor) // .Copy() removed
 	errorStyle       = lipgloss.NewStyle().Foreground(errorColor).Bold(true)
 	paneBaseStyle    = lipgloss.NewStyle().Padding(1, 2).BorderStyle(lipgloss.RoundedBorder())
-	leftPaneStyle    = paneBaseStyle.Copy().BorderForeground(primaryColor)
-	focusedLeftPane  = leftPaneStyle.Copy().BorderForeground(focusedColor)
-	rightPaneStyle   = paneBaseStyle.Copy().BorderForeground(primaryColor)
-	focusedRightPane = rightPaneStyle.Copy().BorderForeground(focusedColor)
+	leftPaneStyle    = paneBaseStyle.BorderForeground(primaryColor) // .Copy() removed
+	focusedLeftPane  = leftPaneStyle.BorderForeground(focusedColor) // .Copy() removed
+	rightPaneStyle   = paneBaseStyle.BorderForeground(primaryColor) // .Copy() removed
+	focusedRightPane = rightPaneStyle.BorderForeground(focusedColor) // .Copy() removed
 )
 
 // pane identifies which of the two panes is currently focused.
