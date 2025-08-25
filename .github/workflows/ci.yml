@@ -1,33 +1,27 @@
-# Simplified Continuous Integration (CI) workflow.
-# It runs on every push and pull request to the main/master branch.
+# yaml-language-server: $schema=https://www.schemastore.org/github-workflow.json
 name: CI
-
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: ["main", "master"]
   pull_request:
-    branches: [ "main", "master" ]
-
+    branches: ["main", "master"]
 jobs:
-  build-and-test:
+  golangci:
+    name: lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@v5
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: 'stable'
           cache: true
-
-      - name: Run linter
-        uses: golangci/golangci-lint-action@v3
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
         with:
-          version: v1.59.1
-
+          version: v2.4.0
       - name: Run tests
         run: go test -v -race ./...
-
       - name: Build
         run: go build -v ./...

@@ -62,4 +62,17 @@ formatters:
 issues:
   max-issues-per-linter: 50
   max-same-issues: 3
+  fix: true
+output:
+  formats:
+    text:
+      print-linter-name: true
+      print-issued-lines: true
+      colors: true
+  show-stats: true
+  sort-order:
+    - linter
+    - severity
+    - file
+
 

@@ -55,7 +55,7 @@ release: lint test ## Create a new version tag and push it to trigger the releas
 .PHONY: lint
 lint: ## Run the linter on the entire project.
 	@echo "--> Running linter..."
-	@golangci-lint run ./...
+	@golangci-lint run  --fix ./...
 
 .PHONY: test
 test: ## Run all tests with the race detector.
