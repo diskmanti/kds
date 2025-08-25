@@ -140,16 +140,16 @@ type model struct {
 	viewport  viewport.Model // For the scrollable right-hand pane.
 
 	// --- State ---
-	allItems        itemSource                  // Holds all secrets fetched from the API.
-	highlightedItem item                        // The secret currently selected in the list.
+	allItems        itemSource                   // Holds all secrets fetched from the API.
+	highlightedItem item                         // The secret currently selected in the list.
 	secretCache     map[string]map[string]string // Caches secret data to avoid repeated API calls.
-	secretErrCache  map[string]error            // Caches errors for specific secrets to show in the UI.
-	width, height   int                         // Current terminal dimensions.
-	focus           pane                        // Tracks which pane is active (left or right).
-	loading         bool                        // True when fetching the initial list of secrets.
-	loadingSecret   bool                        // True when fetching data for a single secret.
-	ready           bool                        // True once the initial layout has been calculated.
-	err             error                       // Stores any fatal error that occurs.
+	secretErrCache  map[string]error             // Caches errors for specific secrets to show in the UI.
+	width, height   int                          // Current terminal dimensions.
+	focus           pane                         // Tracks which pane is active (left or right).
+	loading         bool                         // True when fetching the initial list of secrets.
+	loadingSecret   bool                         // True when fetching data for a single secret.
+	ready           bool                         // True once the initial layout has been calculated.
+	err             error                        // Stores any fatal error that occurs.
 }
 
 // NewModel is the constructor for our TUI model. It initializes all the components
