@@ -21,7 +21,7 @@ import (
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	corev1client "k8s.io/client-go/kubernetes/typed/core/v1" // Import for the interface
+	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 )
@@ -56,16 +56,15 @@ const (
 	rightPane
 )
 
-// --- NEW INTERFACE ---
-// k8sClient defines the interface for the Kubernetes client.
-// This allows us to use a real or fake clientset, which is essential for testing.
-// It only includes the methods our application actually needs.
 type k8sClient interface {
 	CoreV1() corev1client.CoreV1Interface
 }
 
 // --- BUBBLE TEA MODEL ---
-type item struct{ name, namespace string }
+type item struct {
+	name      string
+	namespace string
+}
 
 func (i item) Title() string       { return i.name }
 func (i item) Description() string { return fmt.Sprintf("Namespace: %s", i.namespace) }
@@ -87,12 +86,12 @@ type secretDataErrorMsg struct {
 type fatalErrorMsg struct{ err error }
 
 type model struct {
-	clientset k8sClient // MODIFIED: Use the interface, not the concrete struct.
-	namespace string
-	list      list.Model
-	textinput textinput.Model
-	spinner   spinner.Model
-	viewport  viewport.Model
+	clientset       k8sClient
+	namespace       string
+	list            list.Model
+	textinput       textinput.Model
+	spinner         spinner.Model
+	viewport        viewport.Model
 	allItems        itemSource
 	highlightedItem item
 	secretCache     map[string]map[string]string
@@ -105,7 +104,7 @@ type model struct {
 	err             error
 }
 
-func NewModel(clientset k8sClient, namespace string) model { // MODIFIED: Use the interface
+func NewModel(clientset k8sClient, namespace string) model {
 	ti := textinput.New()
 	ti.Placeholder = "Search for a secret..."
 	ti.Focus()
@@ -137,7 +136,7 @@ func (m model) Init() tea.Cmd {
 }
 
 // --- COMMANDS ---
-func fetchSecrets(clientset k8sClient, namespace string) tea.Cmd { // MODIFIED: Use the interface
+func fetchSecrets(clientset k8sClient, namespace string) tea.Cmd {
 	return func() tea.Msg {
 		secrets, err := clientset.CoreV1().Secrets(namespace).List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
@@ -154,7 +153,7 @@ func fetchSecrets(clientset k8sClient, namespace string) tea.Cmd { // MODIFIED: 
 	}
 }
 
-func fetchSecretData(clientset k8sClient, secretName, namespace string) tea.Cmd { // MODIFIED: Use the interface
+func fetchSecretData(clientset k8sClient, secretName, namespace string) tea.Cmd {
 	return func() tea.Msg {
 		secret, err := clientset.CoreV1().Secrets(namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
 		if err != nil {
@@ -174,96 +173,139 @@ func fetchSecretData(clientset k8sClient, secretName, namespace string) tea.Cmd 
 }
 
 // --- UPDATE ---
+
+// Update is the main message handler. It's a dispatcher that routes messages
+// to more specific handler functions to keep cognitive complexity low.
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
-	var listCmd, inputCmd, vpCmd tea.Cmd
+	var cmd tea.Cmd
 
+	// The spinner should tick whenever we are in a loading state.
 	if m.loading || m.loadingSecret {
-		var spinCmd tea.Cmd
-		m.spinner, spinCmd = m.spinner.Update(msg)
-		cmds = append(cmds, spinCmd)
+		m.spinner, cmd = m.spinner.Update(msg)
+		cmds = append(cmds, cmd)
 	}
 
+	// Message handling is delegated to specific functions.
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.width, m.height = msg.Width, msg.Height
-		helpHeight := lipgloss.Height(m.viewHelp())
-		mainContentHeight := m.height - helpHeight
-		leftPaneWidth := m.width / 2
-		rightPaneWidth := m.width - leftPaneWidth
-		textInputHeight := lipgloss.Height(m.textinput.View())
-		listHeight := mainContentHeight - textInputHeight - paneBaseStyle.GetVerticalPadding()
-		m.list.SetSize(leftPaneWidth-paneBaseStyle.GetHorizontalPadding(), listHeight)
-		m.viewport.Width = rightPaneWidth - rightPaneStyle.GetHorizontalPadding()
-		m.viewport.Height = mainContentHeight - rightPaneStyle.GetVerticalPadding()
-		if !m.ready {
-			m.ready = true
-		} else {
-			if content, ok := m.secretCache[m.highlightedItem.name]; ok {
-				m.viewport.SetContent(m.formatSecretData(content))
-			}
-		}
-		return m, nil
+		m, cmd = m.handleWindowSize(msg)
 	case tea.KeyMsg:
-		if m.loading {
-			return m, nil
-		}
-		switch msg.String() {
-		case "ctrl+c", "q", "esc":
-			return m, tea.Quit
-		case "tab":
-			if m.focus == leftPane {
-				m.focus = rightPane
-				m.textinput.Blur()
-			} else {
-				m.focus = leftPane
-				m.textinput.Focus()
-			}
-			return m, nil
-		}
+		m, cmd = m.handleKeyMsg(msg)
 	case itemSource:
-		m.loading = false
-		m.allItems = msg
-		listItems := make([]list.Item, len(m.allItems))
-		for i, it := range m.allItems {
-			listItems[i] = it
-		}
-		cmds = append(cmds, m.list.SetItems(listItems))
-		if len(m.list.Items()) > 0 {
-			m.highlightedItem = m.list.SelectedItem().(item)
-			m.loadingSecret = true
-			cmds = append(cmds, fetchSecretData(m.clientset, m.highlightedItem.name, m.highlightedItem.namespace))
-		}
-		return m, tea.Batch(cmds...)
+		m, cmd = m.handleSecretsLoaded(msg)
 	case secretDataLoadedMsg:
-		if m.highlightedItem.name == msg.secretName {
-			m.loadingSecret = false
-			m.secretCache[msg.secretName] = msg.data
-			delete(m.secretErrCache, msg.secretName)
-			m.viewport.SetContent(m.formatSecretData(msg.data))
-			m.viewport.GotoTop()
-		}
-		return m, nil
+		m, cmd = m.handleSecretDataLoaded(msg)
 	case secretDataErrorMsg:
-		if m.highlightedItem.name == msg.secretName {
-			m.loadingSecret = false
-			m.secretErrCache[msg.secretName] = msg.err
-		}
-		return m, nil
+		m, cmd = m.handleSecretDataError(msg)
 	case fatalErrorMsg:
 		m.err = msg.err
-		m.loading = false
-		m.loadingSecret = false
 		return m, tea.Quit
 	}
+	cmds = append(cmds, cmd)
 
-	if m.loading {
-		return m, tea.Batch(cmds...)
+	// If not loading, handle user input based on focus.
+	if !m.loading {
+		m, cmd = m.handleFocusedPaneInput(msg)
+		cmds = append(cmds, cmd)
 	}
 
+	return m, tea.Batch(cmds...)
+}
+
+// handleWindowSize updates the layout when the terminal is resized.
+func (m model) handleWindowSize(msg tea.WindowSizeMsg) (model, tea.Cmd) {
+	m.width, m.height = msg.Width, msg.Height
+	helpHeight := lipgloss.Height(m.viewHelp())
+	mainContentHeight := m.height - helpHeight
+	leftPaneWidth := m.width / 2
+	rightPaneWidth := m.width - leftPaneWidth
+	textInputHeight := lipgloss.Height(m.textinput.View())
+	listHeight := mainContentHeight - textInputHeight - paneBaseStyle.GetVerticalPadding()
+	m.list.SetSize(leftPaneWidth-paneBaseStyle.GetHorizontalPadding(), listHeight)
+	m.viewport.Width = rightPaneWidth - rightPaneStyle.GetHorizontalPadding()
+	m.viewport.Height = mainContentHeight - rightPaneStyle.GetVerticalPadding()
+	if !m.ready {
+		m.ready = true
+	} else if content, ok := m.secretCache[m.highlightedItem.name]; ok {
+		m.viewport.SetContent(m.formatSecretData(content))
+	}
+	return m, nil
+}
+
+// handleKeyMsg handles all keyboard input.
+func (m model) handleKeyMsg(msg tea.KeyMsg) (model, tea.Cmd) {
+	if m.loading {
+		return m, nil
+	}
+	switch msg.String() {
+	case "ctrl+c", "q", "esc":
+		return m, tea.Quit
+	case "tab":
+		if m.focus == leftPane {
+			m.focus = rightPane
+			m.textinput.Blur()
+		} else {
+			m.focus = leftPane
+			m.textinput.Focus()
+		}
+	}
+	return m, nil
+}
+
+// handleSecretsLoaded handles the message received after the initial list of secrets is fetched.
+func (m model) handleSecretsLoaded(msg itemSource) (model, tea.Cmd) {
+	m.loading = false
+	m.allItems = msg
+	listItems := make([]list.Item, len(m.allItems))
+	for i, it := range m.allItems {
+		listItems[i] = it
+	}
+	cmd := m.list.SetItems(listItems)
+
+	if len(m.list.Items()) > 0 {
+		if selected, ok := m.list.SelectedItem().(item); ok {
+			m.highlightedItem = selected
+			m.loadingSecret = true
+			return m, tea.Batch(cmd, fetchSecretData(m.clientset, m.highlightedItem.name, m.highlightedItem.namespace))
+		}
+	}
+	return m, cmd
+}
+
+// handleSecretDataLoaded handles the message received after a single secret's data is fetched.
+func (m model) handleSecretDataLoaded(msg secretDataLoadedMsg) (model, tea.Cmd) {
+	if m.highlightedItem.name == msg.secretName {
+		m.loadingSecret = false
+		m.secretCache[msg.secretName] = msg.data
+		delete(m.secretErrCache, msg.secretName)
+		m.viewport.SetContent(m.formatSecretData(msg.data))
+		m.viewport.GotoTop()
+	}
+	return m, nil
+}
+
+// handleSecretDataError handles errors from fetching a single secret's data.
+func (m model) handleSecretDataError(msg secretDataErrorMsg) (model, tea.Cmd) {
+	if m.highlightedItem.name == msg.secretName {
+		m.loadingSecret = false
+		m.secretErrCache[msg.secretName] = msg.err
+	}
+	return m, nil
+}
+
+// handleFocusedPaneInput routes updates to the correct component based on focus.
+func (m model) handleFocusedPaneInput(msg tea.Msg) (model, tea.Cmd) {
+	if _, ok := msg.(tea.KeyMsg); !ok {
+		return m, nil
+	}
+	var cmds []tea.Cmd
+	var cmd tea.Cmd
+
 	if m.focus == leftPane {
-		m.textinput, inputCmd = m.textinput.Update(msg)
-		cmds = append(cmds, inputCmd)
+		m.textinput, cmd = m.textinput.Update(msg)
+		cmds = append(cmds, cmd)
+
 		pattern := m.textinput.Value()
 		var newItems []list.Item
 		if pattern == "" {
@@ -279,8 +321,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		cmds = append(cmds, m.list.SetItems(newItems))
-		m.list, listCmd = m.list.Update(msg)
-		cmds = append(cmds, listCmd)
+
+		m.list, cmd = m.list.Update(msg)
+		cmds = append(cmds, cmd)
+
 		if selected, ok := m.list.SelectedItem().(item); ok && m.highlightedItem.name != selected.name {
 			m.highlightedItem = selected
 			if _, found := m.secretCache[selected.name]; !found {
@@ -289,10 +333,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	} else {
-		m.viewport, vpCmd = m.viewport.Update(msg)
-		cmds = append(cmds, vpCmd)
+		m.viewport, cmd = m.viewport.Update(msg)
+		cmds = append(cmds, cmd)
 	}
-
 	return m, tea.Batch(cmds...)
 }
 
@@ -305,12 +348,15 @@ func (m *model) formatSecretData(data map[string]string) string {
 	}
 	return wordwrap.String(b.String(), m.viewport.Width)
 }
+
 func (m *model) viewHelp() string {
 	return noteStyle.Render("  ↑/↓: navigate | tab: switch pane | q: quit")
 }
+
 func (m *model) viewLeftPane() string {
 	return lipgloss.JoinVertical(lipgloss.Left, m.textinput.View(), m.list.View())
 }
+
 func (m *model) viewRightPane() string {
 	if err, found := m.secretErrCache[m.highlightedItem.name]; found {
 		var b strings.Builder
@@ -328,6 +374,7 @@ func (m *model) viewRightPane() string {
 	}
 	return noteStyle.Render("Select a secret to view its data.")
 }
+
 func (m model) View() string {
 	if m.err != nil {
 		return fmt.Sprintf("\n%s: %v\n\n", errorStyle.Render("Fatal Error"), m.err)
@@ -364,7 +411,7 @@ func main() {
 		Use:   "kds [secret-name]",
 		Short: "A tool with fuzzy-finding to view Kubernetes secrets.",
 		Long:  `kds is a CLI tool for browsing, finding, and viewing Kubernetes secrets.`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			restConfig, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 			if err != nil {
 				return fmt.Errorf("failed to build kubeconfig: %w", err)
@@ -393,7 +440,8 @@ func main() {
 	versionCmd := &cobra.Command{
 		Use:   "version",
 		Short: "Print the version, commit, and build date of kds",
-		Run: func(cmd *cobra.Command, args []string) {
+		// ** FIX 3: Use blank identifier for unused 'args' parameter **
+		Run: func(_ *cobra.Command, _ []string) {
 			fmt.Printf("kds Version: %s\n", version)
 			fmt.Printf("Commit: %s\n", commit)
 			fmt.Printf("Built at: %s\n", date)
@@ -428,7 +476,7 @@ func getNamespaceFromKubeconfig(kubeconfigPath string) (string, error) {
 	return ns, nil
 }
 
-func viewSecretDataDirectly(clientset k8sClient, secretName, namespace string) error { // MODIFIED: Use the interface
+func viewSecretDataDirectly(clientset k8sClient, secretName, namespace string) error {
 	secret, err := clientset.CoreV1().Secrets(namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get secret '%s': %w", secretName, err)

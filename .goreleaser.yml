@@ -1,6 +1,6 @@
-# yaml-language-server: schema=https://goreleaser.com/static/schema.json
-project_name: kds
-version: 1
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+project_name: kds  
+version: 2
 before:
   hooks:
     - go mod tidy
