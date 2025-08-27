@@ -19,7 +19,7 @@ jobs:
       # Step 1: Check out the repository's code.
       # fetch-depth: 0 is still needed for GoReleaser to generate a changelog.
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
